@@ -2,13 +2,15 @@
 //!
 //! Raw communication channel to the FUSE kernel driver.
 
+use std::ffi::{CStr, CString, OsStr};
 use std::io;
-use std::ffi::{CString, CStr, OsStr};
 use std::os::unix::ffi::OsStrExt;
-use std::path::{PathBuf, Path};
-use fuse_sys::{fuse_args, fuse_mount_compat25};
+use std::path::{Path, PathBuf};
+
 use libc::{self, c_int, c_void, size_t};
 use log::error;
+
+use fuse_sys::{fuse_args, fuse_mount_compat25};
 
 use crate::reply::ReplySender;
 
@@ -41,7 +43,7 @@ impl Channel {
             if fd < 0 {
                 Err(io::Error::last_os_error())
             } else {
-                Ok(Channel { mountpoint: mountpoint, fd: fd })
+                Ok(Channel { mountpoint, fd })
             }
         })
     }
@@ -156,11 +158,11 @@ pub fn unmount(mountpoint: &Path) -> io::Result<()> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use super::with_fuse_args;
     use std::ffi::{CStr, OsStr};
+
+    use super::with_fuse_args;
 
     #[test]
     fn fuse_args() {

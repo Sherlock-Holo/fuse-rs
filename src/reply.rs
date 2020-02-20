@@ -13,16 +13,18 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::os::unix::ffi::OsStrExt;
 use std::time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH};
-use fuse_abi::{fuse_attr, fuse_kstatfs, fuse_file_lock, fuse_entry_out, fuse_attr_out};
-use fuse_abi::{fuse_open_out, fuse_write_out, fuse_statfs_out, fuse_lk_out, fuse_bmap_out};
+
+use libc::{c_int, EIO, S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
+use log::warn;
+
+use fuse_abi::{fuse_attr, fuse_attr_out, fuse_entry_out, fuse_file_lock, fuse_kstatfs};
+use fuse_abi::{fuse_bmap_out, fuse_lk_out, fuse_open_out, fuse_statfs_out, fuse_write_out};
+use fuse_abi::{fuse_dirent, fuse_out_header};
 use fuse_abi::fuse_getxattr_out;
 #[cfg(target_os = "macos")]
 use fuse_abi::fuse_getxtimes_out;
-use fuse_abi::{fuse_out_header, fuse_dirent};
-use libc::{c_int, S_IFIFO, S_IFCHR, S_IFBLK, S_IFDIR, S_IFREG, S_IFLNK, S_IFSOCK, EIO};
-use log::warn;
 
-use crate::{FileType, FileAttr};
+use crate::{FileAttr, FileType};
 
 /// Generic reply callback to send data
 pub trait ReplySender: Send + 'static {
@@ -149,7 +151,7 @@ pub struct ReplyRaw<T> {
 impl<T> Reply for ReplyRaw<T> {
     fn new<S: ReplySender>(unique: u64, sender: S) -> ReplyRaw<T> {
         let sender = Box::new(sender);
-        ReplyRaw { unique: unique, sender: Some(sender), marker: PhantomData }
+        ReplyRaw { unique, sender: Some(sender), marker: PhantomData }
     }
 }
 
@@ -265,7 +267,7 @@ impl ReplyEntry {
     pub fn entry(self, ttl: &Duration, attr: &FileAttr, generation: u64) {
         self.reply.ok(&fuse_entry_out {
             nodeid: attr.ino,
-            generation: generation,
+            generation,
             entry_valid: ttl.as_secs(),
             attr_valid: ttl.as_secs(),
             entry_valid_nsec: ttl.subsec_nanos(),
@@ -366,7 +368,7 @@ impl ReplyOpen {
     /// Reply to a request with the given open result
     pub fn opened(self, fh: u64, flags: u32) {
         self.reply.ok(&fuse_open_out {
-            fh: fh,
+            fh,
             open_flags: flags,
             padding: 0,
         });
@@ -396,7 +398,7 @@ impl ReplyWrite {
     /// Reply to a request with the given open result
     pub fn written(self, size: u32) {
         self.reply.ok(&fuse_write_out {
-            size: size,
+            size,
             padding: 0,
         });
     }
@@ -426,14 +428,14 @@ impl ReplyStatfs {
     pub fn statfs(self, blocks: u64, bfree: u64, bavail: u64, files: u64, ffree: u64, bsize: u32, namelen: u32, frsize: u32) {
         self.reply.ok(&fuse_statfs_out {
             st: fuse_kstatfs {
-                blocks: blocks,
-                bfree: bfree,
-                bavail: bavail,
-                files: files,
-                ffree: ffree,
-                bsize: bsize,
-                namelen: namelen,
-                frsize: frsize,
+                blocks,
+                bfree,
+                bavail,
+                files,
+                ffree,
+                bsize,
+                namelen,
+                frsize,
                 padding: 0,
                 spare: [0; 6],
             },
@@ -465,14 +467,14 @@ impl ReplyCreate {
     pub fn created(self, ttl: &Duration, attr: &FileAttr, generation: u64, fh: u64, flags: u32) {
         self.reply.ok(&(fuse_entry_out {
             nodeid: attr.ino,
-            generation: generation,
+            generation,
             entry_valid: ttl.as_secs(),
             attr_valid: ttl.as_secs(),
             entry_valid_nsec: ttl.subsec_nanos(),
             attr_valid_nsec: ttl.subsec_nanos(),
             attr: fuse_attr_from_attr(attr),
         }, fuse_open_out {
-            fh: fh,
+            fh,
             open_flags: flags,
             padding: 0,
         }));
@@ -503,10 +505,10 @@ impl ReplyLock {
     pub fn locked(self, start: u64, end: u64, typ: u32, pid: u32) {
         self.reply.ok(&fuse_lk_out {
             lk: fuse_file_lock {
-                start: start,
-                end: end,
-                typ: typ,
-                pid: pid,
+                start,
+                end,
+                typ,
+                pid,
             },
         });
     }
@@ -535,7 +537,7 @@ impl ReplyBmap {
     /// Reply to a request with the given open result
     pub fn bmap(self, block: u64) {
         self.reply.ok(&fuse_bmap_out {
-            block: block,
+            block,
         });
     }
 
@@ -618,7 +620,7 @@ impl ReplyXattr {
     /// Reply to a request with the size of the xattr.
     pub fn size(self, size: u32) {
         self.reply.ok(&fuse_getxattr_out {
-            size: size,
+            size,
             padding: 0,
         });
     }
@@ -636,16 +638,18 @@ impl ReplyXattr {
 
 #[cfg(test)]
 mod test {
-    use std::thread;
     use std::sync::mpsc::{channel, Sender};
+    use std::thread;
     use std::time::{Duration, UNIX_EPOCH};
+
+    use crate::{FileAttr, FileType};
+
+    use super::{Reply, ReplyAttr, ReplyData, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyRaw};
+    use super::{ReplyBmap, ReplyCreate, ReplyDirectory, ReplyLock, ReplyStatfs, ReplyWrite};
     use super::as_bytes;
-    use super::{Reply, ReplyRaw, ReplyEmpty, ReplyData, ReplyEntry, ReplyAttr, ReplyOpen};
-    use super::{ReplyWrite, ReplyStatfs, ReplyCreate, ReplyLock, ReplyBmap, ReplyDirectory};
     use super::ReplyXattr;
     #[cfg(target_os = "macos")]
     use super::ReplyXTimes;
-    use crate::{FileType, FileAttr};
 
     #[allow(dead_code)]
     #[repr(C)]

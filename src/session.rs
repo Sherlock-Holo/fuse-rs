@@ -5,17 +5,18 @@
 //! filesystem is mounted, the session loop receives, dispatches and replies to kernel requests
 //! for filesystem operations under its mount point.
 
-use std::io;
 use std::ffi::OsStr;
 use std::fmt;
-use std::path::{PathBuf, Path};
-use thread_scoped::{scoped, JoinGuard};
+use std::io;
+use std::path::{Path, PathBuf};
+
 use libc::{EAGAIN, EINTR, ENODEV, ENOENT};
 use log::{error, info};
+use thread_scoped::{JoinGuard, scoped};
 
 use crate::channel::{self, Channel};
-use crate::request::Request;
 use crate::Filesystem;
+use crate::request::Request;
 
 /// The max size of write requests from the kernel. The absolute minimum is 4k,
 /// FUSE recommends at least 128k, max 16M. The FUSE default is 16M on macOS
@@ -49,8 +50,8 @@ impl<FS: Filesystem> Session<FS> {
         info!("Mounting {}", mountpoint.display());
         Channel::new(mountpoint, options).map(|ch| {
             Session {
-                filesystem: filesystem,
-                ch: ch,
+                filesystem,
+                ch,
                 proto_major: 0,
                 proto_minor: 0,
                 initialized: false,
@@ -131,7 +132,7 @@ impl<'a> BackgroundSession<'a> {
             let mut se = se;
             se.run()
         });
-        Ok(BackgroundSession { mountpoint: mountpoint, guard: guard })
+        Ok(BackgroundSession { mountpoint, guard })
     }
 }
 
