@@ -74,7 +74,8 @@ pub struct fuse_attr {
     pub gid: u32,
     pub rdev: u32,
     #[cfg(target_os = "macos")]
-    pub flags: u32,                                     // see chflags(2)
+    // see chflags(2)
+    pub flags: u32,
     #[cfg(feature = "abi-7-9")]
     pub blksize: u32,
     #[cfg(feature = "abi-7-9")]
@@ -84,14 +85,22 @@ pub struct fuse_attr {
 #[repr(C)]
 #[derive(Debug)]
 pub struct fuse_kstatfs {
-    pub blocks: u64,                                    // Total blocks (in units of frsize)
-    pub bfree: u64,                                     // Free blocks
-    pub bavail: u64,                                    // Free blocks for unprivileged users
-    pub files: u64,                                     // Total inodes
-    pub ffree: u64,                                     // Free inodes
-    pub bsize: u32,                                     // Filesystem block size
-    pub namelen: u32,                                   // Maximum filename length
-    pub frsize: u32,                                    // Fundamental file system block size
+    // Total blocks (in units of frsize)
+    pub blocks: u64,
+    // Free blocks
+    pub bfree: u64,
+    // Free blocks for unprivileged users
+    pub bavail: u64,
+    // Total inodes
+    pub files: u64,
+    // Free inodes
+    pub ffree: u64,
+    // Filesystem block size
+    pub bsize: u32,
+    // Maximum filename length
+    pub namelen: u32,
+    // Fundamental file system block size
+    pub frsize: u32,
     pub padding: u32,
     pub spare: [u32; 6],
 }
@@ -107,125 +116,157 @@ pub struct fuse_file_lock {
 
 pub mod consts {
     // Bitmasks for fuse_setattr_in.valid
-    pub const FATTR_MODE: u32               = 1 << 0;
-    pub const FATTR_UID: u32                = 1 << 1;
-    pub const FATTR_GID: u32                = 1 << 2;
-    pub const FATTR_SIZE: u32               = 1 << 3;
-    pub const FATTR_ATIME: u32              = 1 << 4;
-    pub const FATTR_MTIME: u32              = 1 << 5;
-    pub const FATTR_FH: u32                 = 1 << 6;
+    pub const FATTR_MODE: u32 = 1 << 0;
+    pub const FATTR_UID: u32 = 1 << 1;
+    pub const FATTR_GID: u32 = 1 << 2;
+    pub const FATTR_SIZE: u32 = 1 << 3;
+    pub const FATTR_ATIME: u32 = 1 << 4;
+    pub const FATTR_MTIME: u32 = 1 << 5;
+    pub const FATTR_FH: u32 = 1 << 6;
     #[cfg(feature = "abi-7-9")]
-    pub const FATTR_ATIME_NOW: u32          = 1 << 7;
+    pub const FATTR_ATIME_NOW: u32 = 1 << 7;
     #[cfg(feature = "abi-7-9")]
-    pub const FATTR_MTIME_NOW: u32          = 1 << 8;
+    pub const FATTR_MTIME_NOW: u32 = 1 << 8;
     #[cfg(feature = "abi-7-9")]
-    pub const FATTR_LOCKOWNER: u32          = 1 << 9;
+    pub const FATTR_LOCKOWNER: u32 = 1 << 9;
 
     #[cfg(target_os = "macos")]
-    pub const FATTR_CRTIME: u32             = 1 << 28;
+    pub const FATTR_CRTIME: u32 = 1 << 28;
     #[cfg(target_os = "macos")]
-    pub const FATTR_CHGTIME: u32            = 1 << 29;
+    pub const FATTR_CHGTIME: u32 = 1 << 29;
     #[cfg(target_os = "macos")]
-    pub const FATTR_BKUPTIME: u32           = 1 << 30;
+    pub const FATTR_BKUPTIME: u32 = 1 << 30;
     #[cfg(target_os = "macos")]
-    pub const FATTR_FLAGS: u32              = 1 << 31;
+    pub const FATTR_FLAGS: u32 = 1 << 31;
 
     // Flags returned by the open request
-    pub const FOPEN_DIRECT_IO: u32          = 1 << 0;   // bypass page cache for this open file
-    pub const FOPEN_KEEP_CACHE: u32         = 1 << 1;   // don't invalidate the data cache on open
+    // bypass page cache for this open file
+    pub const FOPEN_DIRECT_IO: u32 = 1 << 0;
+    // don't invalidate the data cache on open
+    pub const FOPEN_KEEP_CACHE: u32 = 1 << 1;
     #[cfg(feature = "abi-7-10")]
-    pub const FOPEN_NONSEEKABLE: u32        = 1 << 2;   // the file is not seekable
+    // the file is not seekable
+    pub const FOPEN_NONSEEKABLE: u32 = 1 << 2;
 
     #[cfg(target_os = "macos")]
-    pub const FOPEN_PURGE_ATTR: u32         = 1 << 30;
+    pub const FOPEN_PURGE_ATTR: u32 = 1 << 30;
     #[cfg(target_os = "macos")]
-    pub const FOPEN_PURGE_UBC: u32          = 1 << 31;
+    pub const FOPEN_PURGE_UBC: u32 = 1 << 31;
 
     // Init request/reply flags
-    pub const FUSE_ASYNC_READ: u32          = 1 << 0;   // asynchronous read requests
-    pub const FUSE_POSIX_LOCKS: u32         = 1 << 1;   // remote locking for POSIX file locks
+    // asynchronous read requests
+    pub const FUSE_ASYNC_READ: u32 = 1 << 0;
+    // remote locking for POSIX file locks
+    pub const FUSE_POSIX_LOCKS: u32 = 1 << 1;
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_FILE_OPS: u32            = 1 << 2;   // kernel sends file handle for fstat, etc...
+    // kernel sends file handle for fstat, etc...
+    pub const FUSE_FILE_OPS: u32 = 1 << 2;
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_ATOMIC_O_TRUNC: u32      = 1 << 3;   // handles the O_TRUNC open flag in the filesystem
+    // handles the O_TRUNC open flag in the filesystem
+    pub const FUSE_ATOMIC_O_TRUNC: u32 = 1 << 3;
     #[cfg(feature = "abi-7-10")]
-    pub const FUSE_EXPORT_SUPPORT: u32      = 1 << 4;   // filesystem handles lookups of "." and ".."
+    // filesystem handles lookups of "." and ".."
+    pub const FUSE_EXPORT_SUPPORT: u32 = 1 << 4;
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_BIG_WRITES: u32          = 1 << 5;   // filesystem can handle write size larger than 4kB
+    // filesystem can handle write size larger than 4kB
+    pub const FUSE_BIG_WRITES: u32 = 1 << 5;
     #[cfg(feature = "abi-7-12")]
-    pub const FUSE_DONT_MASK: u32           = 1 << 6;   // don't apply umask to file mode on create operations
+    // don't apply umask to file mode on create operations
+    pub const FUSE_DONT_MASK: u32 = 1 << 6;
 
     #[cfg(all(feature = "abi-7-14", not(target_os = "macos")))]
-    pub const FUSE_SPLICE_WRITE: u32        = 1 << 7;   // kernel supports splice write on the device
+    // kernel supports splice write on the device
+    pub const FUSE_SPLICE_WRITE: u32 = 1 << 7;
     #[cfg(all(feature = "abi-7-14", not(target_os = "macos")))]
-    pub const FUSE_SPLICE_MOVE: u32         = 1 << 8;   // kernel supports splice move on the device
+    // kernel supports splice move on the device
+    pub const FUSE_SPLICE_MOVE: u32 = 1 << 8;
     #[cfg(not(target_os = "macos"))]
-
     #[cfg(feature = "abi-7-14")]
-    pub const FUSE_SPLICE_READ: u32         = 1 << 9;   // kernel supports splice read on the device
+    // kernel supports splice read on the device
+    pub const FUSE_SPLICE_READ: u32 = 1 << 9;
+
     #[cfg(feature = "abi-7-17")]
-    pub const FUSE_FLOCK_LOCKS: u32         = 1 << 10;  // remote locking for BSD style file locks
+    // remote locking for BSD style file locks
+    pub const FUSE_FLOCK_LOCKS: u32 = 1 << 10;
+
     #[cfg(feature = "abi-7-18")]
-    pub const FUSE_HAS_IOCTL_DIR: u32       = 1 << 11;  // kernel supports ioctl on directories
+    // kernel supports ioctl on directories
+    pub const FUSE_HAS_IOCTL_DIR: u32 = 1 << 11;
 
     #[cfg(target_os = "macos")]
-    pub const FUSE_ALLOCATE: u32            = 1 << 27;
+    pub const FUSE_ALLOCATE: u32 = 1 << 27;
     #[cfg(target_os = "macos")]
-    pub const FUSE_EXCHANGE_DATA: u32       = 1 << 28;
+    pub const FUSE_EXCHANGE_DATA: u32 = 1 << 28;
     #[cfg(target_os = "macos")]
-    pub const FUSE_CASE_INSENSITIVE: u32    = 1 << 29;
+    pub const FUSE_CASE_INSENSITIVE: u32 = 1 << 29;
     #[cfg(target_os = "macos")]
-    pub const FUSE_VOL_RENAME: u32          = 1 << 30;
+    pub const FUSE_VOL_RENAME: u32 = 1 << 30;
     #[cfg(target_os = "macos")]
-    pub const FUSE_XTIMES: u32              = 1 << 31;
+    pub const FUSE_XTIMES: u32 = 1 << 31;
 
     // CUSE init request/reply flags
     #[cfg(feature = "abi-7-12")]
-    pub const CUSE_UNRESTRICTED_IOCTL: u32  = 1 << 0;   // use unrestricted ioctl
+    // use unrestricted ioctl
+    pub const CUSE_UNRESTRICTED_IOCTL: u32 = 1 << 0;
 
     // Release flags
-    pub const FUSE_RELEASE_FLUSH: u32       = 1 << 0;
+    pub const FUSE_RELEASE_FLUSH: u32 = 1 << 0;
     #[cfg(feature = "abi-7-17")]
-    pub const FUSE_RELEASE_FLOCK_UNLOCK: u32= 1 << 1;
+    pub const FUSE_RELEASE_FLOCK_UNLOCK: u32 = 1 << 1;
 
     // Getattr flags
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_GETATTR_FH: u32          = 1 << 0;
+    pub const FUSE_GETATTR_FH: u32 = 1 << 0;
 
     // Lock flags
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_LK_FLOCK: u32            = 1 << 0;
+    pub const FUSE_LK_FLOCK: u32 = 1 << 0;
 
     // Write flags
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_WRITE_CACHE: u32         = 1 << 0;   // delayed write from page cache, file handle is guessed
+    // delayed write from page cache, file handle is guessed
+    pub const FUSE_WRITE_CACHE: u32 = 1 << 0;
+
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_WRITE_LOCKOWNER: u32     = 1 << 1;   // lock_owner field is valid
+    // lock_owner field is valid
+    pub const FUSE_WRITE_LOCKOWNER: u32 = 1 << 1;
 
     // Read flags
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_READ_LOCKOWNER: u32      = 1 << 1;
+    pub const FUSE_READ_LOCKOWNER: u32 = 1 << 1;
 
     // IOCTL flags
     #[cfg(feature = "abi-7-11")]
-    pub const FUSE_IOCTL_COMPAT: u32        = 1 << 0;   // 32bit compat ioctl on 64bit machine
+    // 32bit compat ioctl on 64bit machine
+    pub const FUSE_IOCTL_COMPAT: u32 = 1 << 0;
+
     #[cfg(feature = "abi-7-11")]
-    pub const FUSE_IOCTL_UNRESTRICTED: u32  = 1 << 1;   // not restricted to well-formed ioctls, retry allowed
+    // not restricted to well-formed ioctls, retry allowed
+    pub const FUSE_IOCTL_UNRESTRICTED: u32 = 1 << 1;
+
     #[cfg(feature = "abi-7-11")]
-    pub const FUSE_IOCTL_RETRY: u32         = 1 << 2;   // retry with new iovecs
+    // retry with new iovecs
+    pub const FUSE_IOCTL_RETRY: u32 = 1 << 2;
+
     #[cfg(feature = "abi-7-16")]
-    pub const FUSE_IOCTL_32BIT: u32         = 1 << 3;   // 32bit ioctl
+    // 32bit ioctl
+    pub const FUSE_IOCTL_32BIT: u32 = 1 << 3;
+
     #[cfg(feature = "abi-7-18")]
-    pub const FUSE_IOCTL_DIR: u32           = 1 << 4;   // is a directory
+    // is a directory
+    pub const FUSE_IOCTL_DIR: u32 = 1 << 4;
+
     #[cfg(feature = "abi-7-11")]
-    pub const FUSE_IOCTL_MAX_IOV: u32       = 256;      // maximum of in_iovecs + out_iovecs
+    // maximum of in_iovecs + out_iovecs
+    pub const FUSE_IOCTL_MAX_IOV: u32 = 256;
 
     // Poll flags
     #[cfg(feature = "abi-7-9")]
-    pub const FUSE_POLL_SCHEDULE_NOTIFY: u32= 1 << 0;   // request poll notify
+    // request poll notify
+    pub const FUSE_POLL_SCHEDULE_NOTIFY: u32 = 1 << 0;
 
     // The read buffer is required to be at least 8k, but may be much larger
-    pub const FUSE_MIN_READ_BUFFER: usize   = 8192;
+    pub const FUSE_MIN_READ_BUFFER: usize = 8192;
 }
 
 /// Invalid opcode error.
@@ -237,7 +278,8 @@ pub struct InvalidOpcodeError;
 #[allow(non_camel_case_types)]
 pub enum fuse_opcode {
     FUSE_LOOKUP = 1,
-    FUSE_FORGET = 2,                                    // no reply
+    // no reply
+    FUSE_FORGET = 2,
     FUSE_GETATTR = 3,
     FUSE_SETATTR = 4,
     FUSE_READLINK = 5,
@@ -746,8 +788,10 @@ pub struct cuse_init_out {
     pub flags: u32,
     pub max_read: u32,
     pub max_write: u32,
-    pub dev_major: u32,                                 // chardev major
-    pub dev_minor: u32,                                 // chardev minor
+    // chardev major
+    pub dev_major: u32,
+    // chardev minor
+    pub dev_minor: u32,
     pub spare: [u32; 10],
 }
 
@@ -920,7 +964,8 @@ pub struct fuse_notify_retrieve_out {
 #[cfg(feature = "abi-7-15")]
 #[repr(C)]
 #[derive(Debug)]
-pub struct fuse_notify_retrieve_in {                    // matches the size of fuse_write_in
+// matches the size of fuse_write_in
+pub struct fuse_notify_retrieve_in {
     pub dummy1: u64,
     pub offset: u64,
     pub size: u32,

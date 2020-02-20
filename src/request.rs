@@ -8,20 +8,22 @@
 use std::convert::TryFrom;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use libc::{EIO, ENOSYS, EPROTO};
-use fuse_abi::*;
-use fuse_abi::consts::*;
 use log::{debug, error, warn};
 
+use fuse_abi::*;
+use fuse_abi::consts::*;
+
 use crate::channel::ChannelSender;
-use crate::ll;
-use crate::reply::{Reply, ReplyRaw, ReplyEmpty, ReplyDirectory};
-use crate::session::{MAX_WRITE_SIZE, Session};
 use crate::Filesystem;
+use crate::ll;
+use crate::reply::{Reply, ReplyDirectory, ReplyEmpty, ReplyRaw};
+use crate::session::{MAX_WRITE_SIZE, Session};
 
 /// We generally support async reads
 #[cfg(not(target_os = "macos"))]
-const INIT_FLAGS: u32 = FUSE_ASYNC_READ;
+const INIT_FLAGS: u32 = FUSE_ASYNC_READ | FUSE_POSIX_LOCKS;
 // TODO: Add FUSE_EXPORT_SUPPORT and FUSE_BIG_WRITES (requires ABI 7.10)
 
 /// On macOS, we additionally support case insensitiveness, volume renames and xtimes
@@ -53,7 +55,7 @@ impl<'a> Request<'a> {
             }
         };
 
-        Some(Self { ch, data, request})
+        Some(Self { ch, data, request })
     }
 
     /// Dispatch request to the given filesystem.
@@ -259,10 +261,10 @@ impl<'a> Request<'a> {
                 assert!(value.len() == arg.size as usize);
                 #[cfg(target_os = "macos")]
                 #[inline]
-                fn get_position (arg: &fuse_setxattr_in) -> u32 { arg.position }
+                fn get_position(arg: &fuse_setxattr_in) -> u32 { arg.position }
                 #[cfg(not(target_os = "macos"))]
                 #[inline]
-                fn get_position (_arg: &fuse_setxattr_in) -> u32 { 0 }
+                fn get_position(_arg: &fuse_setxattr_in) -> u32 { 0 }
                 se.filesystem.setxattr(self, self.request.nodeid(), name, value, arg.flags, get_position(arg), self.reply());
             }
             ll::Operation::GetXAttr { arg, name } => {
@@ -291,6 +293,9 @@ impl<'a> Request<'a> {
             }
             ll::Operation::BMap { arg } => {
                 se.filesystem.bmap(self, self.request.nodeid(), arg.blocksize, arg.block, self.reply());
+            }
+            ll::Operation::Unknown { .. } => {
+                ReplyEmpty::error(self.reply(), libc::ENOSYS)
             }
 
             #[cfg(target_os = "macos")]

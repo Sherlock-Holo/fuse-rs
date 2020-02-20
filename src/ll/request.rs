@@ -3,13 +3,13 @@
 //! A request represents information about a filesystem operation the kernel driver wants us to
 //! perform.
 
-use fuse_abi::*;
+use std::{error, fmt, mem};
 use std::convert::TryFrom;
 use std::ffi::OsStr;
-use std::{error, fmt, mem};
+
+use fuse_abi::*;
 
 use super::argument::ArgumentIterator;
-
 
 /// Error that may occur while reading and parsing a request from the kernel driver.
 #[derive(Debug)]
@@ -36,7 +36,6 @@ impl fmt::Display for RequestError {
 }
 
 impl error::Error for RequestError {}
-
 
 /// Filesystem operation (and arguments) the kernel driver wants us to perform. The fields of each
 /// variant needs to match the actual arguments the kernel driver sends for the specific operation.
@@ -193,6 +192,9 @@ pub enum Operation<'a> {
     // CuseInit {
     //     arg: &'a fuse_init_in,
     // },
+    Unknown {
+        unknown_opcode: u32,
+    },
 }
 
 impl<'a> fmt::Display for Operation<'a> {
@@ -241,6 +243,8 @@ impl<'a> fmt::Display for Operation<'a> {
             Operation::GetXTimes => write!(f, "GETXTIMES"),
             #[cfg(target_os = "macos")]
             Operation::Exchange { arg, oldname, newname } => write!(f, "EXCHANGE olddir {:#018x}, oldname {:?}, newdir {:#018x}, newname {:?}, options {:#x}", arg.olddir, oldname, arg.newdir, newname, arg.options),
+
+            Operation::Unknown { unknown_opcode } => write!(f, "unknown opcode {}", unknown_opcode)
         }
     }
 }
@@ -340,7 +344,6 @@ impl<'a> Operation<'a> {
     }
 }
 
-
 /// Low-level request of a filesystem operation the kernel driver wants to perform.
 #[derive(Debug)]
 pub struct Request<'a> {
@@ -365,16 +368,30 @@ impl<'a> TryFrom<&'a [u8]> for Request<'a> {
         // Parse header
         let header: &fuse_in_header =
             unsafe { data.fetch() }.ok_or_else(|| RequestError::ShortReadHeader(data.len()))?;
+
         // Parse/check opcode
-        let opcode = fuse_opcode::try_from(header.opcode)
-            .map_err(|_: InvalidOpcodeError| RequestError::UnknownOperation(header.opcode))?;
+        /*let opcode = fuse_opcode::try_from(header.opcode)
+            .map_err(|_: InvalidOpcodeError| RequestError::UnknownOperation(header.opcode))?;*/
+        let opcode = if let Ok(opcode) = fuse_opcode::try_from(header.opcode) {
+            Some(opcode)
+        } else {
+            None
+        };
+
         // Check data size
         if data_len < header.len as usize {
             return Err(RequestError::ShortRead(data_len, header.len as usize));
         }
+
         // Parse/check operation arguments
-        let operation =
-            Operation::parse(&opcode, &mut data).ok_or_else(|| RequestError::InsufficientData)?;
+        /*let operation =
+            Operation::parse(&opcode, &mut data).ok_or_else(|| RequestError::InsufficientData)?;*/
+        let operation = if let Some(opcode) = opcode {
+            Operation::parse(&opcode, &mut data).ok_or_else(|| RequestError::InsufficientData)?
+        } else {
+            Operation::Unknown { unknown_opcode: header.opcode }
+        };
+
         Ok(Self { header, operation })
     }
 }
@@ -420,7 +437,6 @@ impl<'a> Request<'a> {
         &self.operation
     }
 }
-
 
 #[cfg(test)]
 mod tests {
