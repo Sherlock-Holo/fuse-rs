@@ -115,10 +115,7 @@ impl<'a> Request<'a> {
                 self.reply::<ReplyEmpty>().error(EIO);
             }
 
-            ll::Operation::Interrupt { .. } => {
-                // TODO: handle FUSE_INTERRUPT
-                self.reply::<ReplyEmpty>().error(ENOSYS);
-            }
+            ll::Operation::Interrupt { arg } => se.filesystem.interrupt(self, arg.unique, self.reply()),
 
             ll::Operation::Lookup { name } => {
                 se.filesystem.lookup(self, self.request.nodeid(), &name, self.reply());
@@ -218,7 +215,7 @@ impl<'a> Request<'a> {
                 se.filesystem.read(self, self.request.nodeid(), arg.fh, arg.offset as i64, arg.size, self.reply());
             }
             ll::Operation::Write { arg, data } => {
-                assert!(data.len() == arg.size as usize);
+                assert_eq!(data.len(), arg.size as usize);
                 se.filesystem.write(self, self.request.nodeid(), arg.fh, arg.offset as i64, data, arg.write_flags, self.reply());
             }
             ll::Operation::Flush { arg } => {
@@ -258,7 +255,7 @@ impl<'a> Request<'a> {
                 se.filesystem.statfs(self, self.request.nodeid(), self.reply());
             }
             ll::Operation::SetXAttr { arg, name, value } => {
-                assert!(value.len() == arg.size as usize);
+                assert_eq!(value.len(), arg.size as usize);
                 #[cfg(target_os = "macos")]
                 #[inline]
                 fn get_position(arg: &fuse_setxattr_in) -> u32 { arg.position }
@@ -295,7 +292,7 @@ impl<'a> Request<'a> {
                 se.filesystem.bmap(self, self.request.nodeid(), arg.blocksize, arg.block, self.reply());
             }
             ll::Operation::Unknown { .. } => {
-                ReplyEmpty::error(self.reply(), libc::ENOSYS)
+                ReplyEmpty::error(self.reply(), ENOSYS)
             }
 
             #[cfg(target_os = "macos")]

@@ -7,21 +7,22 @@
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
 use std::convert::AsRef;
-use std::io;
 use std::ffi::OsStr;
+use std::io;
 use std::path::Path;
 use std::time::SystemTime;
+
 use libc::{c_int, ENOSYS};
 
-pub use fuse_abi::FUSE_ROOT_ID;
 pub use fuse_abi::consts;
-pub use reply::{Reply, ReplyEmpty, ReplyData, ReplyEntry, ReplyAttr, ReplyOpen};
-pub use reply::{ReplyWrite, ReplyStatfs, ReplyCreate, ReplyLock, ReplyBmap, ReplyDirectory};
+pub use fuse_abi::FUSE_ROOT_ID;
+pub use reply::{Reply, ReplyAttr, ReplyData, ReplyEmpty, ReplyEntry, ReplyOpen};
+pub use reply::{ReplyBmap, ReplyCreate, ReplyDirectory, ReplyLock, ReplyStatfs, ReplyWrite};
 pub use reply::ReplyXattr;
 #[cfg(target_os = "macos")]
 pub use reply::ReplyXTimes;
 pub use request::Request;
-pub use session::{Session, BackgroundSession};
+pub use session::{BackgroundSession, Session};
 
 mod channel;
 mod ll;
@@ -63,6 +64,7 @@ pub struct FileAttr {
     pub mtime: SystemTime,
     /// Time of last change
     pub ctime: SystemTime,
+    #[cfg(target_os = "macos")]
     /// Time of creation (macOS only)
     pub crtime: SystemTime,
     /// Kind of file (directory, file, pipe, etc)
@@ -261,7 +263,7 @@ pub trait Filesystem {
     /// If the datasync parameter is set, then only the directory contents should
     /// be flushed, not the meta data. fh will contain the value set by the opendir
     /// method, or will be undefined if the opendir method didn't set any value.
-    fn fsyncdir (&mut self, _req: &Request<'_>, _ino: u64, _fh: u64, _datasync: bool, reply: ReplyEmpty) {
+    fn fsyncdir(&mut self, _req: &Request<'_>, _ino: u64, _fh: u64, _datasync: bool, reply: ReplyEmpty) {
         reply.error(ENOSYS);
     }
 
@@ -341,6 +343,13 @@ pub trait Filesystem {
         reply.error(ENOSYS);
     }
 
+    /// Handle interrupt.
+    /// When a operation is interrupted, an interrupt request will send to fuse server
+    /// with the unique id of the operation.
+    fn interrupt(&mut self, _req: &Request<'_>, _unique: u64, reply: ReplyEmpty) {
+        reply.error(ENOSYS);
+    }
+
     /// macOS only: Rename the volume. Set fuse_init_out.flags during init to
     /// FUSE_VOL_RENAME to enable
     #[cfg(target_os = "macos")]
@@ -367,7 +376,7 @@ pub trait Filesystem {
 ///
 /// Note that you need to lead each option with a separate `"-o"` string. See
 /// `examples/hello.rs`.
-pub fn mount<FS: Filesystem, P: AsRef<Path>>(filesystem: FS, mountpoint: P, options: &[&OsStr]) -> io::Result<()>{
+pub fn mount<FS: Filesystem, P: AsRef<Path>>(filesystem: FS, mountpoint: P, options: &[&OsStr]) -> io::Result<()> {
     Session::new(filesystem, mountpoint.as_ref(), options).and_then(|mut se| se.run())
 }
 
@@ -376,6 +385,6 @@ pub fn mount<FS: Filesystem, P: AsRef<Path>>(filesystem: FS, mountpoint: P, opti
 /// and therefore returns immediately. The returned handle should be stored
 /// to reference the mounted filesystem. If it's dropped, the filesystem will
 /// be unmounted.
-pub unsafe fn spawn_mount<'a, FS: Filesystem+Send+'a, P: AsRef<Path>>(filesystem: FS, mountpoint: P, options: &[&OsStr]) -> io::Result<BackgroundSession<'a>> {
+pub unsafe fn spawn_mount<'a, FS: Filesystem + Send + 'a, P: AsRef<Path>>(filesystem: FS, mountpoint: P, options: &[&OsStr]) -> io::Result<BackgroundSession<'a>> {
     Session::new(filesystem, mountpoint.as_ref(), options).and_then(|se| se.spawn())
 }
