@@ -23,7 +23,10 @@ use crate::session::{MAX_WRITE_SIZE, Session};
 
 /// We generally support async reads
 #[cfg(not(target_os = "macos"))]
+#[cfg(feature = "posix-lock")]
 const INIT_FLAGS: u32 = FUSE_ASYNC_READ | FUSE_POSIX_LOCKS;
+#[cfg(not(feature = "posix-lock"))]
+const INIT_FLAGS: u32 = FUSE_ASYNC_READ;
 // TODO: Add FUSE_EXPORT_SUPPORT and FUSE_BIG_WRITES (requires ABI 7.10)
 
 /// On macOS, we additionally support case insensitiveness, volume renames and xtimes

@@ -489,17 +489,20 @@ impl ReplyCreate {
 ///
 /// Lock Reply
 ///
+#[cfg(feature = "posix-lock")]
 #[derive(Debug)]
 pub struct ReplyLock {
     reply: ReplyRaw<fuse_lk_out>,
 }
 
+#[cfg(feature = "posix-lock")]
 impl Reply for ReplyLock {
     fn new<S: ReplySender>(unique: u64, sender: S) -> ReplyLock {
         ReplyLock { reply: Reply::new(unique, sender) }
     }
 }
 
+#[cfg(feature = "posix-lock")]
 impl ReplyLock {
     /// Reply to a request with the given open result
     pub fn locked(self, start: u64, end: u64, typ: u32, pid: u32) {

@@ -17,7 +17,9 @@ use libc::{c_int, ENOSYS};
 pub use fuse_abi::consts;
 pub use fuse_abi::FUSE_ROOT_ID;
 pub use reply::{Reply, ReplyAttr, ReplyData, ReplyEmpty, ReplyEntry, ReplyOpen};
-pub use reply::{ReplyBmap, ReplyCreate, ReplyDirectory, ReplyLock, ReplyStatfs, ReplyWrite};
+pub use reply::{ReplyBmap, ReplyCreate, ReplyDirectory, ReplyStatfs, ReplyWrite};
+#[cfg(feature = "posix-lock")]
+pub use reply::ReplyLock;
 pub use reply::ReplyXattr;
 #[cfg(target_os = "macos")]
 pub use reply::ReplyXTimes;
@@ -321,6 +323,7 @@ pub trait Filesystem {
     }
 
     /// Test for a POSIX file lock.
+    #[cfg(feature = "posix-lock")]
     fn getlk(&mut self, _req: &Request<'_>, _ino: u64, _fh: u64, _lock_owner: u64, _start: u64, _end: u64, _typ: u32, _pid: u32, reply: ReplyLock) {
         reply.error(ENOSYS);
     }
@@ -332,6 +335,7 @@ pub trait Filesystem {
     /// used to fill in this field in getlk(). Note: if the locking methods are not
     /// implemented, the kernel will still allow file locking to work locally.
     /// Hence these are only interesting for network filesystems and similar.
+    #[cfg(feature = "posix-lock")]
     fn setlk(&mut self, _req: &Request<'_>, _ino: u64, _fh: u64, _lock_owner: u64, _start: u64, _end: u64, _typ: u32, _pid: u32, _sleep: bool, reply: ReplyEmpty) {
         reply.error(ENOSYS);
     }
