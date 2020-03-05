@@ -167,7 +167,7 @@ pub mod consts {
     #[cfg(feature = "abi-7-10")]
     // filesystem handles lookups of "." and ".."
     pub const FUSE_EXPORT_SUPPORT: u32 = 1 << 4;
-    #[cfg(feature = "abi-7-9")]
+    // #[cfg(feature = "abi-7-9")]
     // filesystem can handle write size larger than 4kB
     pub const FUSE_BIG_WRITES: u32 = 1 << 5;
     #[cfg(feature = "abi-7-12")]
