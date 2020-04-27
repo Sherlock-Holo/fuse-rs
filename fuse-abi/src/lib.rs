@@ -590,7 +590,7 @@ pub struct fuse_setattr_in {
     #[cfg(target_os = "macos")]
     pub crtimensec: u32,
     #[cfg(target_os = "macos")]
-    pub flags: u32,                                     // see chflags(2)
+    pub flags: u32, // see chflags(2)
 }
 
 #[repr(C)]
